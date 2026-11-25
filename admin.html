@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HRD Admin Dashboard — PulseHR Workforce Suite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="./css/custom.css" />
+  <!-- External Libraries: QRCodeJS, SheetJS, jsPDF + AutoTable, Lenis, GSAP + ScrollTrigger -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+  <!-- Auth Loading Overlay -->
+  <div id="admin-loading-screen" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center">
+    <div class="w-10 h-10 rounded-full border-[3px] border-slate-200 border-t-blue-600 animate-spin"></div>
+    <p class="mt-3 text-sm font-medium text-slate-500">Verifying HRD Administrator session...</p>
+  </div>
+
+  <!-- Desktop-First HRD Dashboard Layout -->
+  <div id="admin-shell" class="hidden min-h-screen flex">
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebar-backdrop" class="hidden fixed inset-0 z-40 bg-slate-950/50 lg:hidden"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="admin-sidebar" class="fixed lg:sticky top-0 left-0 z-50 h-screen w-68 bg-slate-950 text-slate-200 flex flex-col border-r border-slate-800/80 -translate-x-full lg:translate-x-0 transition-transform duration-200 shrink-0 w-64">
+      <div class="px-5 py-5 border-b border-slate-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-600/25">
+            PH
+          </div>
+          <div>
+            <p class="text-sm font-bold text-white tracking-tight">PulseHR</p>
+            <p class="text-[11px] text-slate-400">HRD Command Center</p>
+          </div>
+        </div>
+        <button id="close-sidebar-btn" type="button" class="lg:hidden text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" data-lenis-prevent>
+        <button type="button" data-section="overview" class="admin-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white shadow-md shadow-blue-600/20 transition">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          <span>Dashboard Overview</span>
+        </button>
+
+        <button type="button" data-section="kiosk" class="admin-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+          <span>Live QR Kiosk</span>
+        </button>
+
+        <button type="button" data-section="logs" class="admin-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Attendance Logs</span>
+        </button>
+
+        <button type="button" data-section="approvals" class="admin-nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition">
+          <span class="flex items-center gap-3">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Leave &amp; OT Approvals</span>
+          </span>
+          <span id="sidebar-pending-badge" class="hidden px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950">0</span>
+        </button>
+
+        <button type="button" data-section="employees" class="admin-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Employee Management</span>
+        </button>
+
+        <button type="button" data-section="settings" class="admin-nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white transition">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Dynamic Rules &amp; Geofence</span>
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-slate-800/80 space-y-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-bold border border-blue-500/30">
+            HR
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold text-white truncate" id="admin-user-name">HRD Admin</p>
+            <p class="text-[11px] text-slate-400 truncate" id="admin-user-email">admin@company.com</p>
+          </div>
+        </div>
+        <button id="admin-logout-btn" type="button" data-motion-btn class="w-full py-2 rounded-xl bg-slate-900 hover:bg-rose-600/20 hover:text-rose-300 border border-slate-800 text-xs font-semibold text-slate-300 transition">
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Top Header -->
+      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-5 py-3.5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button id="open-sidebar-btn" type="button" class="lg:hidden p-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900 tracking-tight" id="page-section-title">Dashboard Overview</h1>
+            <p class="text-xs text-slate-500" id="page-section-subtitle">Real-time attendance telemetry &amp; workforce status</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="admin-live-clock" class="font-mono-num font-semibold">--:--:--</span>
+          </div>
+          <button id="quick-kiosk-jump-btn" type="button" data-motion-btn class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+            Open Live QR Kiosk
+          </button>
+        </div>
+      </header>
+
+      <!-- Sections Container -->
+      <main class="flex-1 p-5 lg:p-7 space-y-6">
+        <!-- SECTION 1: DASHBOARD OVERVIEW -->
+        <section id="section-overview" class="admin-section space-y-6">
+          <!-- KPI Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="gsap-reveal bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Employees</p>
+                <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-slate-900 font-mono-num mt-2" id="kpi-total-employees">0</p>
+              <p class="text-xs text-slate-400 mt-1">Registered in workforce</p>
+            </div>
+
+            <div class="gsap-reveal bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Present Today</p>
+                <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-emerald-600 font-mono-num mt-2" id="kpi-present-today">0</p>
+              <p class="text-xs text-slate-400 mt-1" id="kpi-present-rate">0% attendance rate</p>
+            </div>
+
+            <div class="gsap-reveal bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Late Today</p>
+                <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-amber-600 font-mono-num mt-2" id="kpi-late-today">0</p>
+              <p class="text-xs text-slate-400 mt-1" id="kpi-late-deductions">Rp 0 deductions today</p>
+            </div>
+
+            <div class="gsap-reveal bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Pending Approvals</p>
+                <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-indigo-600 font-mono-num mt-2" id="kpi-pending-approvals">0</p>
+              <p class="text-xs text-slate-400 mt-1">Leave, sick &amp; overtime queue</p>
+            </div>
+          </div>
+
+          <!-- Active Policy Strip -->
+          <div class="gsap-reveal bg-slate-900 text-slate-100 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-4 text-xs">
+              <span class="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 font-semibold" id="overview-shift-info">
+                Today's Shift: --
+              </span>
+              <span class="text-slate-300" id="overview-geofence-info">Geofence: -- m radius</span>
+              <span class="text-slate-300" id="overview-deduction-info">Deduction: --</span>
+              <span class="text-slate-300" id="overview-overtime-info">Overtime: --</span>
+            </div>
+            <button type="button" id="overview-edit-rules-btn" class="text-xs font-semibold text-blue-400 hover:text-blue-300">
+              Configure Rules &rarr;
+            </button>
+          </div>
+
+          <!-- Two-Column Today Activity + Pending Queue -->
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 gsap-reveal bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Today's Real-Time Check-Ins</h2>
+                  <p class="text-xs text-slate-500" id="overview-today-date">-</p>
+                </div>
+                <span class="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Live Sync
+                </span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th class="px-4 py-3 font-semibold">Employee</th>
+                      <th class="px-4 py-3 font-semibold">In / Out</th>
+                      <th class="px-4 py-3 font-semibold">Distance</th>
+                      <th class="px-4 py-3 font-semibold">Status</th>
+                      <th class="px-4 py-3 font-semibold text-right">Late / OT</th>
+                    </tr>
+                  </thead>
+                  <tbody id="overview-today-tbody" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="gsap-reveal bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-900">Pending Approvals</h2>
+                <button type="button" id="overview-view-approvals-btn" class="text-xs font-semibold text-blue-600 hover:text-blue-700">View All</button>
+              </div>
+              <div id="overview-pending-list" class="p-4 space-y-3 flex-1"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: LIVE QR KIOSK -->
+        <section id="section-kiosk" class="admin-section hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+            <!-- Kiosk QR Display Card -->
+            <div id="kiosk-fullscreen-target" class="lg:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col items-center text-center">
+              <div class="w-full flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Dynamic 20s Anti-Screenshot QR</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="kiosk-rotate-now-btn" type="button" data-motion-btn class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition">
+                    Rotate Now
+                  </button>
+                  <button id="kiosk-fullscreen-btn" type="button" data-motion-btn class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition">
+                    Fullscreen
+                  </button>
+                </div>
+              </div>
+
+              <!-- QR + SVG Countdown Ring -->
+              <div class="relative p-5 rounded-3xl bg-slate-50 border border-slate-200 my-2">
+                <div id="qr-code-display" class="w-[248px] h-[248px] bg-white p-2 rounded-2xl shadow-inner flex items-center justify-center"></div>
+              </div>
+
+              <!-- Countdown Ring & Token Status -->
+              <div class="mt-5 flex items-center gap-5">
+                <div class="relative w-16 h-16 flex items-center justify-center">
+                  <svg class="w-16 h-16 qr-countdown-ring" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" stroke="#e2e8f0" stroke-width="8" fill="none" />
+                    <circle id="qr-ring-progress" class="qr-countdown-progress" cx="60" cy="60" r="52" stroke="#2563eb" stroke-width="8" stroke-linecap="round" fill="none" />
+                  </svg>
+                  <span id="qr-countdown-text" class="absolute text-sm font-bold font-mono-num text-slate-900">20s</span>
+                </div>
+                <div class="text-left text-xs space-y-1">
+                  <p class="text-slate-500">Active Token: <code id="qr-token-preview" class="font-mono-num font-semibold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">Initializing...</code></p>
+                  <p class="text-slate-500">Expires At: <span id="qr-expires-at" class="font-mono-num font-semibold text-slate-800">--:--:--</span></p>
+                  <p class="text-slate-500">Geofence: <span id="kiosk-geofence-label" class="font-semibold text-blue-600">-- m radius</span></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Kiosk Scan Feed -->
+            <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-5">
+              <h2 class="text-sm font-bold text-slate-900">Live Kiosk Scan Feed</h2>
+              <p class="text-xs text-slate-500 mb-4">Employees who clocked in or out today</p>
+              <div id="kiosk-live-feed" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1" data-lenis-prevent></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: ATTENDANCE LOGS & MONTHLY RECAP EXPORT -->
+        <section id="section-logs" class="admin-section hidden space-y-6">
+          <!-- Filters & Export Bar -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Monthly Recap &amp; Attendance Logs</h2>
+                <p class="text-xs text-slate-500">Filter by month, department, or employee and export formatted Excel / PDF</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="export-xlsx-btn" type="button" data-motion-btn class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
+                  <span>Export Excel (.xlsx)</span>
+                </button>
+                <button id="export-pdf-btn" type="button" data-motion-btn class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
+                  <span>Export PDF (.pdf)</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Month</label>
+                <input id="filter-log-month" type="month" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Department</label>
+                <select id="filter-log-dept" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+                  <option value="all">All Departments</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Employee</label>
+                <select id="filter-log-emp" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+                  <option value="all">All Employees</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Status</label>
+                <select id="filter-log-status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+                  <option value="all">All Statuses</option>
+                  <option value="on_time">On Time</option>
+                  <option value="late">Late</option>
+                  <option value="leave">Leave / Sick</option>
+                  <option value="alpha">Alpha</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Search</label>
+                <input id="filter-log-search" type="search" placeholder="Name or date..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Recap Totals Strip -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Present</p>
+              <p class="text-lg font-bold font-mono-num text-slate-900 mt-0.5" id="recap-sum-present">0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Late Count</p>
+              <p class="text-lg font-bold font-mono-num text-amber-600 mt-0.5" id="recap-sum-late-count">0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Late Mins</p>
+              <p class="text-lg font-bold font-mono-num text-amber-700 mt-0.5" id="recap-sum-late-mins">0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">OT Hours</p>
+              <p class="text-lg font-bold font-mono-num text-blue-600 mt-0.5" id="recap-sum-ot-hours">0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Leave/Sick</p>
+              <p class="text-lg font-bold font-mono-num text-sky-600 mt-0.5" id="recap-sum-leave">0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Deductions</p>
+              <p class="text-sm font-bold font-mono-num text-rose-600 mt-1" id="recap-sum-deduction">Rp 0</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-500">Overtime Pay</p>
+              <p class="text-sm font-bold font-mono-num text-emerald-600 mt-1" id="recap-sum-ot-pay">Rp 0</p>
+            </div>
+          </div>
+
+          <!-- Per-Employee Monthly Recap Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-900">Automated Monthly Payroll Recap (Per Employee)</h3>
+              <span class="text-xs text-slate-400" id="recap-employee-count">0 employees</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold">Employee</th>
+                    <th class="px-4 py-3 font-semibold">Dept</th>
+                    <th class="px-4 py-3 font-semibold text-right">Present</th>
+                    <th class="px-4 py-3 font-semibold text-right">Late (Cnt / Min)</th>
+                    <th class="px-4 py-3 font-semibold text-right">OT (Hrs)</th>
+                    <th class="px-4 py-3 font-semibold text-right">Leave/Sick</th>
+                    <th class="px-4 py-3 font-semibold text-right">Deduction</th>
+                    <th class="px-4 py-3 font-semibold text-right">Overtime Pay</th>
+                  </tr>
+                </thead>
+                <tbody id="recap-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Detailed Daily Logs Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-900">Detailed Daily Attendance Logs</h3>
+              <span class="text-xs text-slate-400" id="logs-row-count">0 records</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold">Date</th>
+                    <th class="px-4 py-3 font-semibold">Employee</th>
+                    <th class="px-4 py-3 font-semibold">In</th>
+                    <th class="px-4 py-3 font-semibold">Out</th>
+                    <th class="px-4 py-3 font-semibold">Distance</th>
+                    <th class="px-4 py-3 font-semibold">Status</th>
+                    <th class="px-4 py-3 font-semibold text-right">Late / Deduction</th>
+                    <th class="px-4 py-3 font-semibold text-right">Overtime</th>
+                    <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 4: LEAVE & OVERTIME APPROVALS -->
+        <section id="section-approvals" class="admin-section hidden space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" data-req-status="all" class="req-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white">All</button>
+              <button type="button" data-req-status="pending" class="req-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Pending</button>
+              <button type="button" data-req-status="approved" class="req-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Approved</button>
+              <button type="button" data-req-status="rejected" class="req-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Rejected</button>
+            </div>
+            <select id="filter-req-type" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+              <option value="all">All Types</option>
+              <option value="izin">Izin (Permission)</option>
+              <option value="sakit">Sakit (Sick)</option>
+              <option value="cuti">Cuti (Annual Leave)</option>
+              <option value="lembur">Lembur (Overtime)</option>
+            </select>
+          </div>
+
+          <div id="approvals-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- SECTION 5: EMPLOYEE MANAGEMENT -->
+        <section id="section-employees" class="admin-section hidden space-y-5">
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[240px]">
+              <input id="emp-search-input" type="search" placeholder="Search by name, ID, email, or department..." class="w-full sm:w-80 px-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600" />
+            </div>
+            <button id="open-add-emp-btn" type="button" data-motion-btn class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+              + Add Employee
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th class="px-4 py-3 font-semibold">Employee</th>
+                    <th class="px-4 py-3 font-semibold">ID &amp; Role</th>
+                    <th class="px-4 py-3 font-semibold">Department / Position</th>
+                    <th class="px-4 py-3 font-semibold text-right">Daily Rate</th>
+                    <th class="px-4 py-3 font-semibold text-right">OT Rate / Hr</th>
+                    <th class="px-4 py-3 font-semibold">Status</th>
+                    <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="employees-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 6: DYNAMIC RULES & GEOFENCE SETTINGS -->
+        <section id="section-settings" class="admin-section hidden space-y-6">
+          <form id="rules-settings-form" class="space-y-6" novalidate>
+            <!-- Geofence Configuration -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Office Geofence Coordinates</h2>
+                  <p class="text-xs text-slate-500">Employees outside this radius or with spoofed/inaccurate GPS are blocked</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="detect-office-gps-btn" type="button" data-motion-btn class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition">
+                    Use My Current GPS
+                  </button>
+                  <a id="preview-office-map-link" href="#" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+                    View on Map
+                  </a>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Office Latitude</label>
+                  <input id="rule-office-lat" type="number" step="any" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Office Longitude</label>
+                  <input id="rule-office-lng" type="number" step="any" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Allowed Radius (meters)</label>
+                  <input id="rule-max-radius" type="number" min="10" max="5000" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Max GPS Inaccuracy (m)</label>
+                  <input id="rule-max-accuracy" type="number" min="20" max="1000" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Day-by-Day Shift Schedule -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Weekly Shift Schedule</h2>
+                <p class="text-xs text-slate-500">Default: Mon–Thu &amp; Sat 07:00–15:00, Fri 07:00–15:30, Sun Off-day</p>
+              </div>
+              <div id="rule-schedules-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+
+            <!-- Lateness & Salary Deduction Rules -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Lateness &amp; Deduction Engine</h2>
+                  <p class="text-xs text-slate-500">Configure grace period and automatic lateness salary deductions</p>
+                </div>
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                  <input id="rule-deduction-enabled" type="checkbox" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500" />
+                  <span class="text-xs font-semibold text-slate-800">Enable Deductions</span>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Grace Period (minutes)</label>
+                  <input id="rule-grace-minutes" type="number" min="0" max="120" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Deduction Mode</label>
+                  <select id="rule-deduction-type" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+                    <option value="per_minute">Per-Minute Rate (IDR / min)</option>
+                    <option value="tiered">Tiered Brackets (1-15m, 16-30m, &gt;30m)</option>
+                    <option value="percentage">Percentage of Daily Rate (%)</option>
+                  </select>
+                </div>
+                <div id="rule-deduction-value-wrap">
+                  <label id="rule-deduction-value-label" class="block text-xs font-semibold text-slate-700 mb-1">Deduction Value (IDR / min)</label>
+                  <input id="rule-deduction-value" type="number" min="0" step="any" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+              </div>
+
+              <!-- Tiered Deduction Brackets -->
+              <div id="rule-tiered-brackets-panel" class="hidden bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5">
+                <p class="text-xs font-bold text-slate-700">Tiered Lateness Deduction Brackets (IDR)</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tier 1 (1 – 15 mins late)</label>
+                    <input id="rule-tier-1" type="number" min="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tier 2 (16 – 30 mins late)</label>
+                    <input id="rule-tier-2" type="number" min="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-white" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tier 3 (&gt; 30 mins late)</label>
+                    <input id="rule-tier-3" type="number" min="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Overtime Rules -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Overtime Calculation Rules</h2>
+                <p class="text-xs text-slate-500">Choose auto-calculation or HRD approval workflow with minimum threshold &amp; multiplier</p>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Overtime Mode</label>
+                  <select id="rule-overtime-mode" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium bg-slate-50">
+                    <option value="auto">Auto-Calculated on Clock-Out</option>
+                    <option value="approval_required">Approval Required (HRD Queue)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Min Threshold (minutes)</label>
+                  <input id="rule-ot-threshold" type="number" min="0" max="240" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Hourly Multiplier (× daily/8)</label>
+                  <input id="rule-ot-multiplier" type="number" min="1" max="5" step="0.1" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">Default OT Rate (IDR / hr)</label>
+                  <input id="rule-ot-default-rate" type="number" min="0" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button id="save-rules-btn" type="submit" data-motion-btn class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-lg shadow-blue-600/25 transition">
+                Save All HRD Rules
+              </button>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT EMPLOYEE -->
+  <div id="employee-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 modal-backdrop flex items-center justify-center p-4">
+    <div id="employee-modal-panel" class="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900" id="emp-modal-title">Add New Employee</h3>
+        <button type="button" id="close-emp-modal-btn" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold">&times;</button>
+      </div>
+      <form id="employee-form" class="p-6 space-y-4" novalidate>
+        <input type="hidden" id="emp-edit-uid" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+            <input id="emp-name" type="text" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Employee ID</label>
+            <input id="emp-id" type="text" placeholder="EMP-001" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+            <input id="emp-email" type="email" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+          </div>
+          <div id="emp-password-wrap">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Initial Password</label>
+            <input id="emp-password" type="password" minlength="6" placeholder="Min 6 chars" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Department</label>
+            <input id="emp-dept" type="text" placeholder="Engineering" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Position</label>
+            <input id="emp-pos" type="text" placeholder="Staff / Lead" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Daily Rate (IDR)</label>
+            <input id="emp-daily-rate" type="number" min="0" value="250000" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Overtime Hourly Rate (IDR)</label>
+            <input id="emp-ot-rate" type="number" min="0" value="45000" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono-num bg-slate-50" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Role</label>
+            <select id="emp-role" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50">
+              <option value="employee">Employee</option>
+              <option value="admin">HRD Admin</option>
+            </select>
+          </div>
+          <div class="flex items-end pb-1.5">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input id="emp-active" type="checkbox" checked class="w-4 h-4 rounded text-blue-600" />
+              <span class="text-xs font-semibold text-slate-700">Account Active</span>
+            </label>
+          </div>
+        </div>
+        <div class="pt-2 flex justify-end gap-2.5">
+          <button type="button" id="cancel-emp-modal-btn" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" id="save-emp-btn" data-motion-btn class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm">Save Employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ATTACHMENT LIGHTBOX -->
+  <div id="attachment-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 modal-backdrop flex items-center justify-center p-4">
+    <div id="attachment-modal-panel" class="max-w-xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl">
+      <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+        <p class="text-xs font-bold text-slate-800" id="attachment-modal-title">Request Attachment</p>
+        <button type="button" id="close-attachment-modal" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">&times;</button>
+      </div>
+      <div class="p-4 bg-slate-900 flex items-center justify-center max-h-[75vh] overflow-auto">
+        <img id="attachment-modal-img" alt="Employee attachment" class="max-w-full max-h-[68vh] rounded-xl object-contain" />
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REVIEW REQUEST NOTE -->
+  <div id="review-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 modal-backdrop flex items-center justify-center p-4">
+    <div id="review-modal-panel" class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-slate-900" id="review-modal-title">Review Request</h3>
+        <button type="button" id="close-review-modal" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">&times;</button>
+      </div>
+      <form id="review-modal-form" class="p-5 space-y-4">
+        <p class="text-xs text-slate-600" id="review-modal-summary"></p>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Admin Review Note (Optional)</label>
+          <textarea id="review-note-input" rows="3" placeholder="e.g., Medical note verified, leave approved." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50"></textarea>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancel-review-modal" class="px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700">Cancel</button>
+          <button type="submit" id="confirm-review-btn" data-motion-btn class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./js/admin-ui.js"></script>
+</body>
+</html>

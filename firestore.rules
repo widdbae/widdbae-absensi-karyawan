@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveUser() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDoc().isActive != false;
+    }
+
+    function isAdmin() {
+      return isActiveUser()
+        && (currentUserDoc().role == 'admin' || currentUserDoc().role == 'hrd_admin');
+    }
+
+    // Users Collection: Employee profiles & compensation metadata
+    match /users/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Attendance Collection: Daily clock-in / clock-out & leave sync records
+    match /attendance/{docId} {
+      allow read: if isAdmin() || (isActiveUser() && resource.data.uid == request.auth.uid);
+
+      allow create: if isAdmin() || (
+        isActiveUser()
+        && docId == (request.auth.uid + '_' + request.resource.data.date)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status in ['on_time', 'late']
+        && request.resource.data.clockInTime is string
+        && request.resource.data.clockOutTime == null
+      );
+
+      allow update: if isAdmin() || (
+        isActiveUser()
+        && resource.data.uid == request.auth.uid
+        && resource.data.clockOutTime == null
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.clockInTime == resource.data.clockInTime
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.lateMinutes == resource.data.lateMinutes
+        && request.resource.data.deductionAmount == resource.data.deductionAmount
+        && request.resource.data.overtimeStatus in ['none', 'auto_approved', 'pending_approval', 'approved']
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // Requests Collection: Izin, Sakit, Cuti, Lembur
+    match /requests/{docId} {
+      allow read: if isAdmin() || (isActiveUser() && resource.data.uid == request.auth.uid);
+
+      allow create: if isActiveUser()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.type in ['izin', 'sakit', 'cuti', 'lembur'];
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Dynamic Settings: Attendance Rules & Rotating 20s QR Token
+    match /settings/attendance_rules {
+      allow read: if isActiveUser();
+      allow write: if isAdmin();
+    }
+
+    match /settings/active_qr {
+      allow read: if isActiveUser();
+      allow write: if isAdmin();
+    }
+  }
+}
